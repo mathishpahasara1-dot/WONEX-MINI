@@ -1,0 +1,19 @@
+{
+  "name": "wonex-mini",
+  "version": "1.0.0",
+  "description": "Wonex-Mini WhatsApp Bot",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "pino": "^9.3.2",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
