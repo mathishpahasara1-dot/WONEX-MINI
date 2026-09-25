@@ -12,7 +12,7 @@ import { handleMessage } from "./handler.js";
 import "./firebase.js";
 
 const CONNECT_METHOD =
-  process.env.CONNECT_METHOD || "pairing";
+  process.env.CONNECT_METHOD || "qr";
 
 async function startBot() {
   console.log("\n======================================");
@@ -44,7 +44,7 @@ async function startBot() {
     saveCreds
   );
 
-  let pairingCodeRequested = false;
+  let pairingRequested = false;
 
   sock.ev.on(
     "connection.update",
@@ -56,48 +56,59 @@ async function startBot() {
         qr
       } = update;
 
-      // ==================================
-      // 🔐 PAIRING CODE
-      // ==================================
-      //
-      // IMPORTANT:
-      // Wait for QR event before asking
-      // WhatsApp for pairing code.
-      //
+      // =================================
+      // 📱 QR LOGIN
+      // =================================
+
+      if (
+        CONNECT_METHOD === "qr" &&
+        qr
+      ) {
+        console.log(
+          "\n📱 Scan this QR code:\n"
+        );
+
+        qrcode.generate(
+          qr,
+          {
+            small: true
+          }
+        );
+      }
+
+      // =================================
+      // 🔐 PAIRING CODE LOGIN
+      // =================================
 
       if (
         CONNECT_METHOD === "pairing" &&
-        qr &&
         !state.creds.registered &&
-        !pairingCodeRequested
+        !pairingRequested &&
+        (
+          connection === "connecting" ||
+          !!qr
+        )
       ) {
 
-        pairingCodeRequested = true;
+        pairingRequested = true;
 
-        let phoneNumber =
-          process.env.PHONE_NUMBER || "";
-
-        phoneNumber =
-          phoneNumber.replace(/\D/g, "");
+        const phoneNumber =
+          (
+            process.env.PHONE_NUMBER || ""
+          ).replace(/\D/g, "");
 
         if (!phoneNumber) {
-
           console.log(
             "\n❌ PHONE_NUMBER is missing."
           );
-
           return;
         }
 
-        console.log(
-          "\n🔐 WhatsApp socket is ready."
-        );
-
-        console.log(
-          "📱 Requesting pairing code..."
-        );
-
         try {
+
+          console.log(
+            "\n🔐 Requesting pairing code..."
+          );
 
           const code =
             await sock.requestPairingCode(
@@ -129,11 +140,7 @@ async function startBot() {
           );
 
           console.log(
-            "\n📱 WhatsApp:"
-          );
-
-          console.log(
-            "Linked Devices"
+            "\n📱 WhatsApp → Linked Devices"
           );
 
           console.log(
@@ -145,13 +152,13 @@ async function startBot() {
           );
 
           console.log(
-            `→ Enter ${code}\n`
+            `→ Enter: ${code}\n`
           );
 
         } catch (error) {
 
           console.error(
-            "\n❌ PAIRING CODE ERROR"
+            "\n❌ Pairing error:"
           );
 
           console.error(
@@ -161,30 +168,9 @@ async function startBot() {
         }
       }
 
-      // ==================================
-      // 📱 QR MODE
-      // ==================================
-
-      if (
-        CONNECT_METHOD === "qr" &&
-        qr
-      ) {
-
-        console.log(
-          "\n📱 Scan this QR code:\n"
-        );
-
-        qrcode.generate(
-          qr,
-          {
-            small: true
-          }
-        );
-      }
-
-      // ==================================
+      // =================================
       // ✅ CONNECTED
-      // ==================================
+      // =================================
 
       if (
         connection === "open"
@@ -223,9 +209,9 @@ async function startBot() {
         );
       }
 
-      // ==================================
+      // =================================
       // ❌ CONNECTION CLOSED
-      // ==================================
+      // =================================
 
       if (
         connection === "close"
@@ -242,20 +228,17 @@ async function startBot() {
         );
 
         console.log(
-          `📛 Status: ${statusCode}`
+          `📛 Status Code: ${statusCode}`
         );
 
-        // 401 = logged out
         const shouldReconnect =
           statusCode !==
           DisconnectReason.loggedOut;
 
-        if (
-          shouldReconnect
-        ) {
+        if (shouldReconnect) {
 
           console.log(
-            "🔄 Restarting WhatsApp socket..."
+            "🔄 Reconnecting..."
           );
 
           setTimeout(
@@ -268,49 +251,44 @@ async function startBot() {
         } else {
 
           console.log(
-            "🔐 WhatsApp session logged out."
+            "🔐 WhatsApp logged out."
           );
 
           console.log(
-            "A new session is required."
+            "Delete session and connect again."
           );
         }
       }
     }
   );
 
-  // ==================================
+  // =================================
   // 💬 MESSAGE HANDLER
-  // ==================================
+  // =================================
 
   sock.ev.on(
     "messages.upsert",
-    async (event) => {
-
-      if (
-        event.type &&
-        event.type !== "notify"
-      ) {
-        return;
-      }
+    async ({
+      messages
+    }) => {
 
       try {
 
         for (
-          const message
-          of event.messages
+          const message of messages
         ) {
 
           await handleMessage(
             sock,
             message
           );
+
         }
 
       } catch (error) {
 
         console.error(
-          "❌ Message handler error:",
+          "❌ Message error:",
           error
         );
 
@@ -319,18 +297,15 @@ async function startBot() {
   );
 }
 
-// ======================================
+// =====================================
 // 🚀 START
-// ======================================
+// =====================================
 
 startBot().catch(
   (error) => {
 
     console.error(
-      "\n❌ FATAL BOT ERROR\n"
-    );
-
-    console.error(
+      "\n❌ FATAL BOT ERROR:\n",
       error
     );
 
