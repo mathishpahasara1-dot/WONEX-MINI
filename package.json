@@ -12,7 +12,7 @@
     "node": ">=20"
   },
   "dependencies": {
-  "@whiskeysockets/baileys": "^6.7.18",
+  "@whiskeysockets/baileys": "^6.7.23",
   "firebase-admin": "^13.4.0",
   "pino": "^9.3.2",
   "qrcode-terminal": "^0.12.0"
