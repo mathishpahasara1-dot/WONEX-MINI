@@ -5,7 +5,6 @@ import makeWASocket, {
 
 import P from "pino";
 import qrcode from "qrcode-terminal";
-import readline from "readline";
 
 import config from "./config.js";
 import { handleMessage } from "./handler.js";
@@ -13,20 +12,6 @@ import "./firebase.js";
 
 const CONNECT_METHOD =
   process.env.CONNECT_METHOD || "qr";
-
-function askQuestion(question) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
 
 async function startBot() {
   console.log("\n================================");
@@ -39,11 +24,7 @@ async function startBot() {
 
   const sock = makeWASocket({
     auth: state,
-
-    logger: P({
-      level: "silent"
-    }),
-
+    logger: P({ level: "silent" }),
     printQRInTerminal: false,
 
     browser: [
@@ -53,135 +34,145 @@ async function startBot() {
     ]
   });
 
-  /*
-  ========================================
-  AUTH CREDENTIALS
-  ========================================
-  */
-
   sock.ev.on(
     "creds.update",
     saveCreds
   );
 
-  /*
-  ========================================
-  PAIRING CODE
-  ========================================
-  */
-
-  if (
-    CONNECT_METHOD === "pairing" &&
-    !state.creds.registered
-  ) {
-    let phoneNumber =
-      process.env.PHONE_NUMBER;
-
-    if (!phoneNumber) {
-      phoneNumber = await askQuestion(
-        "\n📱 Enter WhatsApp number with country code:\n" +
-        "Example: 94729169740\n\n" +
-        "Number: "
-      );
-    }
-
-    phoneNumber =
-      phoneNumber.replace(/\D/g, "");
-
-    if (!phoneNumber) {
-      console.log(
-        "❌ Invalid phone number."
-      );
-
-      process.exit(1);
-    }
-
-    try {
-      const code =
-        await sock.requestPairingCode(
-          phoneNumber
-        );
-
-      console.log(
-        "\n================================"
-      );
-
-      console.log(
-        "🤖 WONEX-MINI PAIRING"
-      );
-
-      console.log(
-        "================================"
-      );
-
-      console.log(
-        `📱 Number: ${phoneNumber}`
-      );
-
-      console.log(
-        `🔐 Pairing Code: ${code}`
-      );
-
-      console.log(
-        "================================\n"
-      );
-
-      console.log(
-        "WhatsApp → Linked Devices → " +
-        "Link with phone number"
-      );
-
-      console.log(
-        "Enter the code shown above."
-      );
-
-    } catch (error) {
-
-      console.error(
-        "❌ Pairing error:",
-        error
-      );
-    }
-  }
-
-  /*
-  ========================================
-  CONNECTION UPDATE
-  ========================================
-  */
+  let pairingRequested = false;
 
   sock.ev.on(
     "connection.update",
-    ({
+    async ({
       connection,
       lastDisconnect,
       qr
     }) => {
 
-      /*
-      QR CODE
-      */
+      // ==============================
+      // 📱 QR LOGIN
+      // ==============================
 
       if (
-        qr &&
-        CONNECT_METHOD === "qr"
+        CONNECT_METHOD === "qr" &&
+        qr
       ) {
-
         console.log(
           "\n📱 Scan this QR code:\n"
         );
 
         qrcode.generate(
           qr,
-          {
-            small: true
-          }
+          { small: true }
         );
       }
 
-      /*
-      CONNECTED
-      */
+      // ==============================
+      // 🔐 PAIRING CODE LOGIN
+      // ==============================
+
+      if (
+        CONNECT_METHOD === "pairing" &&
+        !state.creds.registered &&
+        !pairingRequested &&
+        (
+          connection === "connecting" ||
+          qr
+        )
+      ) {
+
+        pairingRequested = true;
+
+        let phoneNumber =
+          process.env.PHONE_NUMBER;
+
+        if (!phoneNumber) {
+          console.log(
+            "\n❌ PHONE_NUMBER is missing."
+          );
+          return;
+        }
+
+        phoneNumber =
+          phoneNumber.replace(/\D/g, "");
+
+        if (!phoneNumber) {
+          console.log(
+            "\n❌ Invalid phone number."
+          );
+          return;
+        }
+
+        try {
+
+          // Wait a little for WhatsApp socket
+          await new Promise(
+            (resolve) =>
+              setTimeout(resolve, 1500)
+          );
+
+          console.log(
+            "\n🔐 Requesting pairing code..."
+          );
+
+          const code =
+            await sock.requestPairingCode(
+              phoneNumber
+            );
+
+          console.log(
+            "\n================================"
+          );
+
+          console.log(
+            "🤖 WONEX-MINI PAIRING"
+          );
+
+          console.log(
+            "================================"
+          );
+
+          console.log(
+            `📱 Number: ${phoneNumber}`
+          );
+
+          console.log(
+            `🔐 Pairing Code: ${code}`
+          );
+
+          console.log(
+            "================================"
+          );
+
+          console.log(
+            "\n📱 WhatsApp → Linked Devices"
+          );
+
+          console.log(
+            "→ Link a device"
+          );
+
+          console.log(
+            "→ Link with phone number instead"
+          );
+
+          console.log(
+            `→ Enter: ${code}\n`
+          );
+
+        } catch (error) {
+
+          console.error(
+            "\n❌ Pairing error:",
+            error
+          );
+
+        }
+      }
+
+      // ==============================
+      // ✅ CONNECTED
+      // ==============================
 
       if (
         connection === "open"
@@ -220,9 +211,9 @@ async function startBot() {
         );
       }
 
-      /*
-      CONNECTION CLOSED
-      */
+      // ==============================
+      // ❌ CONNECTION CLOSED
+      // ==============================
 
       if (
         connection === "close"
@@ -240,6 +231,10 @@ async function startBot() {
 
         console.log(
           "\n❌ WhatsApp connection closed."
+        );
+
+        console.log(
+          `📛 Status Code: ${statusCode}`
         );
 
         if (shouldReconnect) {
@@ -260,19 +255,16 @@ async function startBot() {
           );
 
           console.log(
-            "Delete the session folder " +
-            "and connect again."
+            "Delete the session folder and connect again."
           );
         }
       }
     }
   );
 
-  /*
-  ========================================
-  MESSAGE SYSTEM
-  ========================================
-  */
+  // ==============================
+  // 💬 MESSAGE HANDLER
+  // ==============================
 
   sock.ev.on(
     "messages.upsert",
@@ -299,16 +291,15 @@ async function startBot() {
           "❌ Message error:",
           error
         );
+
       }
     }
   );
 }
 
-/*
-========================================
-START BOT
-========================================
-*/
+// ==============================
+// 🚀 START BOT
+// ==============================
 
 startBot().catch(
   (error) => {
@@ -319,5 +310,6 @@ startBot().catch(
     );
 
     process.exit(1);
+
   }
 );
