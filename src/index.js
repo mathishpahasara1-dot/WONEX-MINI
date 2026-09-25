@@ -9,6 +9,7 @@ import readline from "readline";
 
 import config from "./config.js";
 import { handleMessage } from "./handler.js";
+import "./firebase.js";
 
 const CONNECT_METHOD =
   process.env.CONNECT_METHOD || "qr";
