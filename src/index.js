@@ -28,10 +28,12 @@ async function startBot() {
     printQRInTerminal: false,
 
     browser: [
-      config.botName,
-      "Chrome",
-      "1.0.0"
-    ]
+  "Windows",
+  "Chrome",
+  "114.0.5735.198"
+],
+markOnlineOnConnect: false,
+syncFullHistory: false,
   });
 
   sock.ev.on(
