@@ -72,7 +72,7 @@ async function startBot() {
 
   if (
     CONNECT_METHOD === "pairing" &&
-    !sock.authState.creds.registered
+    !state.creds.registered
   ) {
     let phoneNumber =
       process.env.PHONE_NUMBER;
