@@ -1,6 +1,7 @@
 import makeWASocket, {
   useMultiFileAuthState,
-  DisconnectReason
+  DisconnectReason,
+  Browsers
 } from "@whiskeysockets/baileys";
 
 import P from "pino";
@@ -11,29 +12,31 @@ import { handleMessage } from "./handler.js";
 import "./firebase.js";
 
 const CONNECT_METHOD =
-  process.env.CONNECT_METHOD || "qr";
+  process.env.CONNECT_METHOD || "pairing";
 
 async function startBot() {
-  console.log("\n================================");
+  console.log("\n======================================");
   console.log(`🤖 ${config.botName}`);
   console.log("🚀 Starting WhatsApp Bot...");
-  console.log("================================\n");
+  console.log("======================================\n");
 
   const { state, saveCreds } =
     await useMultiFileAuthState("./session");
 
   const sock = makeWASocket({
     auth: state,
-    logger: P({ level: "silent" }),
+
+    logger: P({
+      level: "silent"
+    }),
+
     printQRInTerminal: false,
 
-    browser: [
-  "Windows",
-  "Chrome",
-  "114.0.5735.198"
-],
-markOnlineOnConnect: false,
-syncFullHistory: false,
+    browser: Browsers.macOS("Chrome"),
+
+    markOnlineOnConnect: false,
+
+    syncFullHistory: false
   });
 
   sock.ev.on(
@@ -41,81 +44,60 @@ syncFullHistory: false,
     saveCreds
   );
 
-  let pairingRequested = false;
+  let pairingCodeRequested = false;
 
   sock.ev.on(
     "connection.update",
-    async ({
-      connection,
-      lastDisconnect,
-      qr
-    }) => {
+    async (update) => {
 
-      // ==============================
-      // 📱 QR LOGIN
-      // ==============================
-
-      if (
-        CONNECT_METHOD === "qr" &&
+      const {
+        connection,
+        lastDisconnect,
         qr
-      ) {
-        console.log(
-          "\n📱 Scan this QR code:\n"
-        );
+      } = update;
 
-        qrcode.generate(
-          qr,
-          { small: true }
-        );
-      }
-
-      // ==============================
-      // 🔐 PAIRING CODE LOGIN
-      // ==============================
+      // ==================================
+      // 🔐 PAIRING CODE
+      // ==================================
+      //
+      // IMPORTANT:
+      // Wait for QR event before asking
+      // WhatsApp for pairing code.
+      //
 
       if (
         CONNECT_METHOD === "pairing" &&
+        qr &&
         !state.creds.registered &&
-        !pairingRequested &&
-        (
-          connection === "connecting" ||
-          qr
-        )
+        !pairingCodeRequested
       ) {
 
-        pairingRequested = true;
+        pairingCodeRequested = true;
 
         let phoneNumber =
-          process.env.PHONE_NUMBER;
-
-        if (!phoneNumber) {
-          console.log(
-            "\n❌ PHONE_NUMBER is missing."
-          );
-          return;
-        }
+          process.env.PHONE_NUMBER || "";
 
         phoneNumber =
           phoneNumber.replace(/\D/g, "");
 
         if (!phoneNumber) {
+
           console.log(
-            "\n❌ Invalid phone number."
+            "\n❌ PHONE_NUMBER is missing."
           );
+
           return;
         }
 
+        console.log(
+          "\n🔐 WhatsApp socket is ready."
+        );
+
+        console.log(
+          "📱 Requesting pairing code..."
+        );
+
         try {
-
-          // Wait a little for WhatsApp socket
-          await new Promise(
-            (resolve) =>
-              setTimeout(resolve, 1500)
-          );
-
-          console.log(
-            "\n🔐 Requesting pairing code..."
-          );
 
           const code =
             await sock.requestPairingCode(
@@ -123,7 +105,7 @@ syncFullHistory: false,
             );
 
           console.log(
-            "\n================================"
+            "\n======================================"
           );
 
           console.log(
@@ -131,7 +113,7 @@ syncFullHistory: false,
           );
 
           console.log(
-            "================================"
+            "======================================"
           );
 
           console.log(
@@ -139,15 +121,19 @@ syncFullHistory: false,
           );
 
           console.log(
-            `🔐 Pairing Code: ${code}`
+            `🔐 PAIRING CODE: ${code}`
           );
 
           console.log(
-            "================================"
+            "======================================"
           );
 
           console.log(
-            "\n📱 WhatsApp → Linked Devices"
+            "\n📱 WhatsApp:"
+          );
+
+          console.log(
+            "Linked Devices"
           );
 
           console.log(
@@ -159,29 +145,53 @@ syncFullHistory: false,
           );
 
           console.log(
-            `→ Enter: ${code}\n`
+            `→ Enter ${code}\n`
           );
 
         } catch (error) {
 
           console.error(
-            "\n❌ Pairing error:",
+            "\n❌ PAIRING CODE ERROR"
+          );
+
+          console.error(
             error
           );
 
         }
       }
 
-      // ==============================
+      // ==================================
+      // 📱 QR MODE
+      // ==================================
+
+      if (
+        CONNECT_METHOD === "qr" &&
+        qr
+      ) {
+
+        console.log(
+          "\n📱 Scan this QR code:\n"
+        );
+
+        qrcode.generate(
+          qr,
+          {
+            small: true
+          }
+        );
+      }
+
+      // ==================================
       // ✅ CONNECTED
-      // ==============================
+      // ==================================
 
       if (
         connection === "open"
       ) {
 
         console.log(
-          "\n================================"
+          "\n======================================"
         );
 
         console.log(
@@ -189,7 +199,7 @@ syncFullHistory: false,
         );
 
         console.log(
-          "================================"
+          "======================================"
         );
 
         console.log(
@@ -209,13 +219,13 @@ syncFullHistory: false,
         );
 
         console.log(
-          "================================\n"
+          "======================================\n"
         );
       }
 
-      // ==============================
+      // ==================================
       // ❌ CONNECTION CLOSED
-      // ==============================
+      // ==================================
 
       if (
         connection === "close"
@@ -227,70 +237,80 @@ syncFullHistory: false,
             ?.output
             ?.statusCode;
 
-        const shouldReconnect =
-          statusCode !==
-          DisconnectReason.loggedOut;
-
         console.log(
           "\n❌ WhatsApp connection closed."
         );
 
         console.log(
-          `📛 Status Code: ${statusCode}`
+          `📛 Status: ${statusCode}`
         );
 
-        if (shouldReconnect) {
+        // 401 = logged out
+        const shouldReconnect =
+          statusCode !==
+          DisconnectReason.loggedOut;
+
+        if (
+          shouldReconnect
+        ) {
 
           console.log(
-            "🔄 Reconnecting..."
+            "🔄 Restarting WhatsApp socket..."
           );
 
           setTimeout(
-            startBot,
+            () => {
+              startBot();
+            },
             3000
           );
 
         } else {
 
           console.log(
-            "🔐 WhatsApp logged out."
+            "🔐 WhatsApp session logged out."
           );
 
           console.log(
-            "Delete the session folder and connect again."
+            "A new session is required."
           );
         }
       }
     }
   );
 
-  // ==============================
+  // ==================================
   // 💬 MESSAGE HANDLER
-  // ==============================
+  // ==================================
 
   sock.ev.on(
     "messages.upsert",
-    async ({
-      messages
-    }) => {
+    async (event) => {
+
+      if (
+        event.type &&
+        event.type !== "notify"
+      ) {
+        return;
+      }
 
       try {
 
         for (
-          const message of messages
+          const message
+          of event.messages
         ) {
 
           await handleMessage(
             sock,
             message
           );
-
         }
 
       } catch (error) {
 
         console.error(
-          "❌ Message error:",
+          "❌ Message handler error:",
           error
         );
 
@@ -299,19 +319,21 @@ syncFullHistory: false,
   );
 }
 
-// ==============================
-// 🚀 START BOT
-// ==============================
+// ======================================
+// 🚀 START
+// ======================================
 
 startBot().catch(
   (error) => {
 
     console.error(
-      "\n❌ Fatal Bot Error:\n",
+      "\n❌ FATAL BOT ERROR\n"
+    );
+
+    console.error(
       error
     );
 
     process.exit(1);
-
   }
 );
