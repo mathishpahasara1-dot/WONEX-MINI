@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Wonex-Mini Login</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, Arial, sans-serif;
+      color: #fff;
+
+      background:
+        radial-gradient(
+          circle at 20% 10%,
+          #5b1d83 0,
+          transparent 32%
+        ),
+        radial-gradient(
+          circle at 90% 90%,
+          #0d6b78 0,
+          transparent 30%
+        ),
+        #080b16;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .card {
+      background: rgba(12, 16, 31, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 26px;
+      padding: 26px;
+
+      box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.45);
+
+      backdrop-filter: blur(18px);
+    }
+
+    .logo {
+      width: 68px;
+      height: 68px;
+
+      border-radius: 20px;
+
+      display: grid;
+      place-items: center;
+
+      font-size: 30px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #a855f7,
+          #06b6d4
+        );
+
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 27px;
+    }
+
+    .sub {
+      color: #aab1c5;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+
+      font-size: 13px;
+
+      color: #b8bfd1;
+
+      margin: 14px 0 7px;
+    }
+
+    input,
+    button {
+      width: 100%;
+
+      border: 0;
+
+      border-radius: 14px;
+
+      padding: 14px 15px;
+
+      font-size: 15px;
+    }
+
+    input {
+      color: #fff;
+
+      background: #171c2e;
+
+      outline:
+        1px solid
+        rgba(255, 255, 255, 0.08);
+    }
+
+    button {
+      cursor: pointer;
+
+      color: #fff;
+
+      font-weight: 700;
+
+      background:
+        linear-gradient(
+          135deg,
+          #8b5cf6,
+          #06b6d4
+        );
+
+      margin-top: 12px;
+    }
+
+    button.secondary {
+      background: #171c2e;
+
+      outline:
+        1px solid
+        rgba(255, 255, 255, 0.08);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .status {
+      margin-top: 18px;
+
+      padding: 14px;
+
+      border-radius: 15px;
+
+      background: #11172a;
+
+      color: #dbe1f2;
+
+      white-space: pre-wrap;
+    }
+
+    .code {
+      font-size: 29px;
+
+      letter-spacing: 7px;
+
+      text-align: center;
+
+      padding: 18px 8px;
+
+      margin-top: 16px;
+
+      border-radius: 16px;
+
+      background: #0b1020;
+
+      font-weight: 800;
+    }
+
+    .qr {
+      display: block;
+
+      width: min(320px, 100%);
+
+      margin: 18px auto 0;
+
+      background: #fff;
+
+      padding: 8px;
+
+      border-radius: 16px;
+    }
+
+    .row {
+      display: grid;
+
+      grid-template-columns:
+        1fr 1fr;
+
+      gap: 10px;
+    }
+
+    .tiny {
+      font-size: 12px;
+
+      line-height: 1.5;
+
+      color: #8f98ae;
+
+      margin-top: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <div class="card">
+
+    <div class="logo">
+      ⚡
+    </div>
+
+    <h1>
+      WONEX-MINI
+    </h1>
+
+    <div class="sub">
+      Multi-session WhatsApp Login
+    </div>
+
+
+    <!-- LOGIN -->
+
+    <section id="loginBox">
+
+      <label>
+        Web Password
+      </label>
+
+      <input
+        id="password"
+        type="password"
+        placeholder="Enter web password"
+      >
+
+      <button onclick="login()">
+        Unlock Login Panel
+      </button>
+
+      <div
+        id="loginMsg"
+        class="status hidden">
+      </div>
+
+    </section>
+
+
+    <!-- CONTROL PANEL -->
+
+    <section
+      id="panel"
+      class="hidden">
+
+      <label>
+        WhatsApp Number
+      </label>
+
+      <input
+        id="number"
+        inputmode="numeric"
+        placeholder="9477XXXXXXXX"
+      >
+
+
+      <div class="row">
+
+        <button
+          onclick="connect('pairing')">
+          🔐 Pairing Code
+        </button>
+
+        <button
+          class="secondary"
+          onclick="connect('qr')">
+          📷 QR Code
+        </button>
+
+      </div>
+
+
+      <div
+        id="status"
+        class="status">
+        Ready.
+      </div>
+
+
+      <div
+        id="code"
+        class="code hidden">
+      </div>
+
+
+      <img
+        id="qr"
+        class="qr hidden"
+        alt="WhatsApp QR code"
+      >
+
+
+      <button
+        class="secondary"
+        onclick="refreshStatus()">
+        ↻ Refresh Status
+      </button>
+
+
+      <button
+        class="secondary"
+        onclick="logout()">
+        🚪 Logout Session
+      </button>
+
+
+      <div class="tiny">
+
+        Enter the WhatsApp number in
+        international digits-only format.
+
+        Example:
+        9477XXXXXXXX.
+
+        Never share the web password publicly.
+
+      </div>
+
+    </section>
+
+  </div>
+
+</div>
+
+
+<script>
+
+let token =
+  localStorage.getItem("wonex_token") || "";
+
+let currentNumber = "";
+
+
+function headers() {
+
+  return {
+
+    "Content-Type":
+      "application/json",
+
+    "Authorization":
+      "Bearer " + token
+
+  };
+
+}
+
+
+function showLoginMsg(text) {
+
+  const el =
+    document.getElementById(
+      "loginMsg"
+    );
+
+  el.textContent = text;
+
+  el.classList.remove(
+    "hidden"
+  );
+
+}
+
+
+async function login() {
+
+  const password =
+    document.getElementById(
+      "password"
+    ).value;
+
+
+  const r = await fetch(
+    "/api/login",
+    {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json"
+      },
+
+      body:
+        JSON.stringify({
+          password
+        })
+
+    }
+  );
+
+
+  const data =
+    await r.json();
+
+
+  if (!data.ok) {
+
+    showLoginMsg(
+      "❌ " + data.error
+    );
+
+    return;
+
+  }
+
+
+  token = data.token;
+
+
+  localStorage.setItem(
+    "wonex_token",
+    token
+  );
+
+
+  document
+    .getElementById(
+      "loginBox"
+    )
+    .classList.add(
+      "hidden"
+    );
+
+
+  document
+    .getElementById(
+      "panel"
+    )
+    .classList.remove(
+      "hidden"
+    );
+
+}
+
+
+async function connect(method) {
+
+  const number =
+    document
+      .getElementById(
+        "number"
+      )
+      .value
+      .replace(
+        /\D/g,
+        ""
+      );
+
+
+  currentNumber =
+    number;
+
+
+  if (!number) {
+
+    setStatus(
+      "❌ Enter a WhatsApp number first."
+    );
+
+    return;
+
+  }
+
+
+  hideCodeQr();
+
+
+  setStatus(
+    "⏳ Starting " +
+    method +
+    " login..."
+  );
+
+
+  const r = await fetch(
+    "/api/connect",
+    {
+
+      method: "POST",
+
+      headers:
+        headers(),
+
+      body:
+        JSON.stringify({
+          number,
+          method
+        })
+
+    }
+  );
+
+
+  const data =
+    await r.json();
+
+
+  if (!data.ok) {
+
+    setStatus(
+      "❌ " +
+      data.error
+    );
+
+    return;
+
+  }
+
+
+  poll();
+
+}
+
+
+async function poll() {
+
+  if (!currentNumber)
+    return;
+
+
+  const r = await fetch(
+
+    "/api/status/" +
+    encodeURIComponent(
+      currentNumber
+    ),
+
+    {
+      headers:
+        headers()
+    }
+
+  );
+
+
+  if (r.status === 401) {
+
+    localStorage.removeItem(
+      "wonex_token"
+    );
+
+    location.reload();
+
+    return;
+
+  }
+
+
+  const data =
+    await r.json();
+
+
+  const s =
+    data.session;
+
+
+  if (!s) {
+
+    setStatus(
+      "No active session."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    s.status ===
+    "waiting_pairing"
+  ) {
+
+    document
+      .getElementById(
+        "code"
+      )
+      .textContent =
+        s.pairingCode ||
+        "Loading...";
+
+
+    document
+      .getElementById(
+        "code"
+      )
+      .classList.remove(
+        "hidden"
+      );
+
+
+    setStatus(
+      "🔐 Pairing code generated.\n\n" +
+
+      "WhatsApp → Linked Devices → " +
+
+      "Link a device → " +
+
+      "Link with phone number instead → " +
+
+      "enter the code."
+    );
+
+  }
+
+
+  else if (
+    s.status ===
+    "waiting_qr"
+  ) {
+
+    setStatus(
+      "📷 QR generated. " +
+      "Scan it from WhatsApp → Linked Devices."
+    );
+
+    await loadQr();
+
+  }
+
+
+  else if (
+    s.status ===
+    "connected"
+  ) {
+
+    setStatus(
+      "✅ CONNECTED\n\n" +
+
+      currentNumber +
+
+      "\n\nWonex-Mini is online."
+    );
+
+    hideCodeQr();
+
+  }
+
+
+  else if (
+    s.status ===
+    "error"
+  ) {
+
+    setStatus(
+      "❌ " +
+      (
+        s.error ||
+        "Connection error."
+      )
+    );
+
+  }
+
+
+  else {
+
+    setStatus(
+      "⏳ " +
+      s.status
+    );
+
+  }
+
+
+  if (
+    s.status !==
+      "connected" &&
+
+    s.status !==
+      "error" &&
+
+    s.status !==
+      "logged_out"
+  ) {
+
+    setTimeout(
+      poll,
+      1800
+    );
+
+  }
+
+}
+
+
+async function loadQr() {
+
+  const r =
+    await fetch(
+
+      "/api/qr/" +
+      encodeURIComponent(
+        currentNumber
+      ),
+
+      {
+        headers:
+          headers()
+      }
+
+    );
+
+
+  if (!r.ok)
+    return;
+
+
+  const data =
+    await r.json();
+
+
+  const img =
+    document.getElementById(
+      "qr"
+    );
+
+
+  img.src =
+    data.qr;
+
+
+  img.classList.remove(
+    "hidden"
+  );
+
+}
+
+
+async function refreshStatus() {
+
+  if (!currentNumber)
+    return;
+
+  poll();
+
+}
+
+
+async function logout() {
+
+  if (!currentNumber)
+    return;
+
+
+  await fetch(
+    "/api/logout",
+    {
+
+      method: "POST",
+
+      headers:
+        headers(),
+
+      body:
+        JSON.stringify({
+          number:
+            currentNumber
+        })
+
+    }
+  );
+
+
+  hideCodeQr();
+
+
+  setStatus(
+    "🚪 Session logged out."
+  );
+
+}
+
+
+function hideCodeQr() {
+
+  document
+    .getElementById(
+      "code"
+    )
+    .classList.add(
+      "hidden"
+    );
+
+
+  document
+    .getElementById(
+      "qr"
+    )
+    .classList.add(
+      "hidden"
+    );
+
+}
+
+
+function setStatus(text) {
+
+  document
+    .getElementById(
+      "status"
+    )
+    .textContent =
+      text;
+
+}
+
+</script>
+
+</body>
+</html>
