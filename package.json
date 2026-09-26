@@ -1,0 +1,22 @@
+{
+  "name": "wonex-mini-multisession",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Wonex-Mini multi-session WhatsApp bot with password-protected web login",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
+    "pino": "^9.3.2",
+    "qrcode": "^1.5.4"
+  }
+}
